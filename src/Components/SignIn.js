@@ -2,7 +2,19 @@ import "./header.css";
 import { useState, useRef } from "react";
 import Header from "./Header";
 import { checkValidate } from "../utills/validate";
+import { useDispatch } from "react-redux";
+import { addUser } from "../utills/userSlice";
+import {
+  signInWithEmailAndPassword,
+  updateProfile,
+  createUserWithEmailAndPassword,
+} from "firebase/auth";
+import { auth } from "../utills/firebase";
+import { userImage } from "../utills/constants";
+
 const SignIn = () => {
+  const dispatch = useDispatch();
+  //const navigate = useNavigate();
   const [isSignin, setIsSignin] = useState(true);
   const [errMsg, setErrMsg] = useState(null);
   const userName = useRef(null);
@@ -14,6 +26,66 @@ const SignIn = () => {
   const handlesubmit = () => {
     let msg = checkValidate(email.current.value, password.current.value);
     setErrMsg(msg);
+    if (msg) return;
+    if (!isSignin) {
+      //signup logic
+      createUserWithEmailAndPassword(
+        auth,
+        email.current.value,
+        password.current.value
+      )
+        .then((userCredential) => {
+          // Signed up
+          const user = userCredential.user;
+          updateProfile(user, {
+            displayName: userName.current.value,
+            photoURL: userImage,
+          })
+            .then(() => {
+              // Profile updated!
+              const { uid, displayName, email, photoURL } = auth.currentUser;
+              dispatch(
+                addUser({
+                  uid: uid,
+                  email: email,
+                  displayName: displayName,
+                  photoURL: photoURL,
+                })
+              );
+              // navigate("/browse");
+            })
+            .catch((error) => {
+              // An error occurred
+              setErrMsg(error.message);
+            });
+
+          console.log(user);
+
+          // ...
+        })
+        .catch((error) => {
+          const errorCode = error.code;
+          const errorMessage = error.message;
+          setErrMsg(errorCode + " " + errorMessage);
+
+          // ..
+        });
+    } else {
+      //sign Logic
+      signInWithEmailAndPassword(
+        auth,
+        email.current.value,
+        password.current.value
+      )
+        .then((userCredential) => {
+          const user = userCredential.user;
+        })
+        .catch((error) => {
+          const errorCode = error.code;
+          const errorMessage = error.message;
+          setErrMsg("User is Not found");
+        });
+    }
   };
   return (
     <div className="header-bg ">
